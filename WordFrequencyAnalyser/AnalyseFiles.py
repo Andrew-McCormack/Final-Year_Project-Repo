@@ -5,176 +5,198 @@ import Subtitle
 import NLP
 import WordResponse
 
-MAX_TIME_DIFFERENCE = 2000
-def main():
+class AnalyseFiles:
 
-    global currentSubtitle
-    global nextSubtitle
+    currentSubtitle = None
+    nextSubtitle = None
 
-    firstRun = True
+    def __init__(self, subtitleFile, wordFrequencyDistribution):
+        self.analyse(subtitleFile, wordFrequencyDistribution)
 
-    try:
-        subFile = open(os.path.join('./SubFiles/The.Godfather.1972.1080p.BluRay.x264.DTS.Rus.Ukr.Eng.HDclub_eng.srt'))
-    except Exception:
-        return 0
+    def analyse(self, subtitleFile, wordFrequencyDistribution):
+        global currentSubtitle
+        global nextSubtitle
 
-    # Get rid of number of lines in file symbol
-    subFile.readline()
+        firstRun = True
+        try:
+            subFile = open(subtitleFile)
+        except Exception:
+            return 0
 
-
-    lineNumber = 0
-    firstRun = True
-    currentSubtitle = ''
-
-    while (True):
-        subNumber = subFile.readline()
-        subNumber = subNumber.strip()
-
-        if ((subNumber == '') or (subNumber.isspace())):
-            break
-        else:
-
-            lineNumber += 1
-
-            timeSub = subFile.readline()
-
-            if(timeSub == None):
-                raise ValueError('Error parsing time subtitle')
-
-            subtitleString = ''
-            s = None
-            newSubtitleFound = False
-            nextSubtitleText = ''
-            while (True):
-                s = subFile.readline()
-                if((s == '') or (s.isspace())):
-                    break
-                else:
-                    if ((s.strip().startswith('-')) and (len(subtitleString) > 0)):
-                        newSubtitleFound = True
-                        nextSubtitleText = s
-                    else:
-                        subtitleString += s + ' '
+        # Get rid of number of lines in file symbol
+        subFile.readline()
 
 
-            startTime = int(parse(timeSub.split('-->')[0]))
-            stopTime = int(parse(timeSub.split('-->')[1]))
+        lineNumber = 0
+        firstRun = True
 
-            number = int(subNumber)
+        while (True):
+            subNumber = subFile.readline()
+            subNumber = subNumber.strip()
 
-            nextSubtitle = Subtitle.Subtitle(number, startTime, stopTime, subtitleString)
-
-
-            if(firstRun == True):
-                firstRun = False
-                currentSubtitle = nextSubtitle
+            if ((subNumber == '') or (subNumber.isspace())):
+                break
             else:
-                # Add back in later
-                #addToFrequencyDistribution(frequencyDistribution)
-                addToFrequencyDistributionEmpty()
-                if(newSubtitleFound):
-                    nextSubtitle = Subtitle.Subtitle(number, startTime, stopTime, nextSubtitleText)
-                    # Add back in later
-                    #addToFrequencyDistribution(frequencyDistribution)
-                    addToFrequencyDistributionEmpty()
 
-        #return frequencyDistribution
+                lineNumber += 1
 
-def isTimeOk():
-    global MAX_TIME_DIFFERENCE
-    global currentSubtitle
-    global nextSubtitle
-    nextStartTime = nextSubtitle.startTime
-    currEndTime = currentSubtitle.stopTime
-    diff = nextStartTime - currEndTime
-    return diff < MAX_TIME_DIFFERENCE
+                timeSub = subFile.readline()
 
-def subtitlesAreOk():
-    global currentSubtitle
-    global nextSubtitle
+                if(timeSub == None):
+                    raise ValueError('Error parsing time subtitle')
 
-    nextSub = nextSubtitle.subtitleString
+                subtitleString = ''
+                s = None
+                newSubtitleFound = False
+                nextSubtitleText = ''
+                while (True):
+                    s = subFile.readline()
+                    if((s == '') or (s.isspace())):
+                        break
+                    else:
+                        if ((s.strip().startswith('-')) and (len(subtitleString) > 0)):
+                            newSubtitleFound = True
+                            nextSubtitleText = s
+                        else:
+                            subtitleString += s + ' '
 
-    if(currentSubtitle == None):
+                startTime = int(self.parse(timeSub.split('-->')[0]))
+                stopTime = int(self.parse(timeSub.split('-->')[1]))
+
+                #print(startTime)
+                #print(stopTime)
+
+                number = int(subNumber)
+
+                nextSubtitle = Subtitle.Subtitle(number, startTime, stopTime, subtitleString)
+
+
+                if(firstRun == True):
+                    firstRun = False
+                    currentSubtitle = nextSubtitle
+                else:
+                    self.addToFrequencyDistributionWithFreq(wordFrequencyDistribution)
+                    #self.addToFrequencyDistributionEmpty()
+                    if(newSubtitleFound == True):
+                        nextSubtitle = Subtitle.Subtitle(number, startTime, stopTime, nextSubtitleText)
+                        self.addToFrequencyDistributionWithFreq(wordFrequencyDistribution)
+                        #self.addToFrequencyDistributionEmpty()
+
+            #return frequencyDistribution
+
+    def isTimeOk(self):
+        MAX_TIME_DIFFERENCE = 2000
+
+        #print('Current sub is: ' + currentSubtitle.subtitleString)
+        #print('Next sub is: ' + nextSubtitle.subtitleString)
+
+        global currentSubtitle
+        global nextSubtitle
+        nextStartTime = nextSubtitle.startTime
+        #print(nextStartTime)
+        currEndTime = currentSubtitle.stopTime
+        #print(currEndTime)
+        diff = nextStartTime - currEndTime
+
+        #print('Result is: ' + str((diff < MAX_TIME_DIFFERENCE)).lower())
+
+        if(diff < MAX_TIME_DIFFERENCE):
+            return True
+
         return False
-    elif(nextSub == None):
-        return False
-    elif(eq(nextSub.strip(), '')):
-        return False
-    elif(nextSub.strip().startswith('[') and nextSub.strip().endswith(']')):
-        return False
 
-    return True
+    def subtitlesAreOk(self):
+        global currentSubtitle
+        global nextSubtitle
 
+        nextSub = nextSubtitle.subtitleString
 
-def parse(input):
-    split = []
-    split = (input.split(':'))
+        if(currentSubtitle == None):
+            return False
+        elif(nextSub == None):
+            return False
+        elif(eq(nextSub.strip(), '')):
+            return False
+        elif(nextSub.strip().startswith('[') and nextSub.strip().endswith(']')):
+            return False
 
-    hours = int(split[0].strip())
-    minutes = int(split[1].strip())
-    seconds = int(split[2].split(',')[0].strip())
-    millies = int(split[2].strip(',')[1].strip())
-
-    return hours * 60 * 60 * 1000 + minutes * 60 * 1000 + seconds * 1000 + millies;
+        #print('Returning true')
+        return True
 
 
-def addToFrequencyDistributionEmpty():
-    global currentSubtitle
-    global nextSubtitle
+    def parse(self, input):
+        split = []
+        split = (input.split(':'))
 
-    if(isTimeOk()):
-        if(subtitlesAreOk()):
-            addToFrequencyDistributionNoFreq(currentSubtitle.subtitleString, nextSubtitle.subtitleString)
-            currentSubtitle = nextSubtitle
+        hours = int(split[0].strip())
+        minutes = int(split[1].strip())
+
+        secondsMillies = split[2].split(','.strip())
+
+        seconds = int(secondsMillies[0])
+        millies = int(secondsMillies[1])
+
+        return hours * 60 * 60 * 1000 + minutes * 60 * 1000 + seconds * 1000 + millies;
+
+
+    def addToFrequencyDistributionEmpty(self):
+        global currentSubtitle
+        global nextSubtitle
+
+        if(self.isTimeOk()):
+            if(self.subtitlesAreOk()):
+                self.addToFrequencyDistributionNoFreq(currentSubtitle.subtitleString, nextSubtitle.subtitleString)
+                currentSubtitle = nextSubtitle
+                nextSubtitle = None
+            else:
+                currentSubtitle = nextSubtitle
             nextSubtitle = None
+
+    def addToFrequencyDistributionWithFreq(self, frequencyDistribution):
+        global currentSubtitle
+        global nextSubtitle
+
+        if(self.isTimeOk()):
+            if(self.subtitlesAreOk()):
+                self.addToFrequencyDistribution(frequencyDistribution, currentSubtitle.subtitleString, nextSubtitle.subtitleString)
+                currentSubtitle = nextSubtitle
+                nextSubtitle = None
         else:
             currentSubtitle = nextSubtitle
-        nextSubtitle = None
 
-def addToFrequencyDistribution(frequencyDistribution):
-    global currentSubtitle
-    global nextSubtitle
-
-    if(isTimeOk()):
-        if(subtitlesAreOk()):
-            addToFrequencyDistribution(frequencyDistribution, currentSubtitle.subtitleString, nextSubtitle.subtitleString)
-            currentSubtitle = nextSubtitle
-            nextSubtitle = None
-        else:
-            currentSubtitle = nextSubtitle
         nextSubtitle = None
 
 
-def addToFrequencyDistributionNoFreq(currSubtitleText, nextSubtitleText):
-    tokens = []
-    tokens = NLP.NLP.tokenize(currSubtitleText)
+    def addToFrequencyDistributionNoFreq(self, currSubtitleText, nextSubtitleText):
+        tokens = []
+        tokens = NLP.NLP.tokenize(currSubtitleText)
 
-    size = len(tokens)
-    wordResponse = WordResponse.WordResponse(nextSubtitleText, 1.0 / size)
+        size = len(tokens)
+        wordResponse = WordResponse.WordResponse(nextSubtitleText, 1.0 / size)
 
-    responses = []
-    for token in tokens:
-        print(token)
-        #responses = set(WordResponse)
-        responses.append(wordResponse)
-
-
-def addToFrequencyDistribution(frequencyDistribution, currSubtitleText, nextSubtitleText):
-    tokens = []
-    tokens = NLP.NLP.tokenize(currSubtitleText)
-
-    size = len(tokens)
-    wordResponse = WordResponse.WordResponse(nextSubtitleText, 1.0 / size)
-
-    for token in tokens:
-        responses = frequencyDistribution.get(token)
-        if(responses == None):
-            responses = set(WordResponse)
-
-        responses.add(wordResponse)
-        frequencyDistribution.put(token, responses)
+        responses = []
+        for token in tokens:
+            #responses = set(WordResponse)
+            responses.append(wordResponse)
 
 
-if __name__ == '__main__':
-    main()
+    def addToFrequencyDistribution(self,frequencyDistribution, currSubtitleText, nextSubtitleText):
+        tokens = NLP.NLP.tokenize(currSubtitleText)
+
+        currSubtitleText = " ".join(currSubtitleText.split())
+        nextSubtitleText = " ".join(nextSubtitleText.split())
+        currSubtitleText = currSubtitleText.replace('-', '')
+        nextSubtitleText = nextSubtitleText.replace('-', '')
+
+        size = len(tokens)
+        #print(nextSubtitleText)
+        #print()
+        wordResponse = WordResponse.WordResponse(nextSubtitleText, 1.0 / size)
+
+        for token in tokens:
+            responses = frequencyDistribution.get(token)
+            if(responses == None):
+                responses = set()
+
+            responses.add(wordResponse)
+            frequencyDistribution[token] = responses

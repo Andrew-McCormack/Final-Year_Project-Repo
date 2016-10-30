@@ -7,8 +7,8 @@ class Subtitle:
 
     def __init__(self, subtitleNumber, startTime, stopTime, subtitleString):
         self.subtitleNumber = subtitleNumber
-        self.startOfSubtitle = startTime
-        self.endOfSubtitle = stopTime
+        self.startTime = startTime
+        self.stopTime = stopTime
         self.subtitleString = subtitleString
 
     def printSub(self):
